@@ -1,0 +1,3 @@
+{
+  "typescript.tsdk": "./gui/node_modules/typescript/lib"
+}

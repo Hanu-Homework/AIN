@@ -1,15 +1,7 @@
-class StateNode:
-
-    def __init__(self):
-        self.move = (0, 0)
-        self.is_winning = None
-        self.children: [StateNode] = []
-
-    def __repr__(self):
-        return f"{self.move}"
+from StateNode import StateNode
 
 
-def is_winning(piles, current_state_node, solution_dict, is_my_turn=True, memo=None):
+def solve(piles: [int], current_state_node: StateNode, solution_dict: dict, is_my_turn=True, memo=None):
     # Solvable for multiple piles
 
     if memo is None:
@@ -32,7 +24,9 @@ def is_winning(piles, current_state_node, solution_dict, is_my_turn=True, memo=N
 
         for i in range(len(piles)):
             for number_of_takes in range(1, piles[i] + 1):
-                new_piles = piles[:i] + [piles[i] - number_of_takes] + piles[i + 1:]
+
+                new_piles = piles.copy()
+                new_piles[i] -= number_of_takes
 
                 new_state_node = StateNode()
 
@@ -42,7 +36,7 @@ def is_winning(piles, current_state_node, solution_dict, is_my_turn=True, memo=N
 
                 current_state_node.children.append(new_state_node)
 
-                winning = is_winning(new_piles, new_state_node, solution_dict, not is_my_turn, memo)
+                winning = solve(new_piles, new_state_node, solution_dict, not is_my_turn, memo)
 
                 new_state_node.is_winning = winning
 
@@ -57,7 +51,7 @@ def is_winning(piles, current_state_node, solution_dict, is_my_turn=True, memo=N
         return result
 
 
-def print_path(piles, node: StateNode, level: int = 0, is_my_move=False):
+def print_path(piles: [int], node: StateNode, level: int = 0, is_my_move=False):
     row_index, number_of_takes = node.move
 
     piles[row_index] -= number_of_takes
@@ -75,16 +69,31 @@ def print_path(piles, node: StateNode, level: int = 0, is_my_move=False):
 
 
 def search_for_winning_move(state: [int], solution_dict) -> tuple:
-    return solution_dict[tuple(sorted(state))]
+    state_notation = tuple(sorted(state))
+
+    ret = solution_dict[state_notation]
+
+    row_number, number_of_takes = ret
+
+    real_index = state.index(state_notation[row_number])
+
+    return real_index, number_of_takes
 
 
-def play(piles, solution_dict):
+def print_state(piles: [int]):
+    max_length = 2 * max(piles) - 1
+    for pile in piles:
+        row = " ".join(["*"] * pile)
+        print(row.center(max_length))
 
+
+def play(piles: [int], solution_dict: dict):
     if sum(piles) == 0:
         print("You Won")
         return
 
     print("Current State: " + str(piles))
+    print_state(piles)
 
     try:
         winning_move = search_for_winning_move(piles, solution_dict)
@@ -94,17 +103,16 @@ def play(piles, solution_dict):
 
     row_number, number_of_takes = winning_move
 
-    print(row_number, number_of_takes)
-
     piles[row_number] -= number_of_takes
 
     print(f"Next winning move: Takes {number_of_takes} sticks from row {row_number + 1}")
 
     print("After State: " + str(piles))
+    print_state(piles)
 
     print()
     print("Other move: ")
-    
+
     other_row_number = int(input("\tOther row number: "))
     other_number_of_takes = int(input("\tOther number of takes: "))
 
@@ -118,14 +126,13 @@ def play(piles, solution_dict):
 
 
 if __name__ == '__main__':
-
     root_state = StateNode()
 
     solution = dict()
 
-    pile_counts = [i for i in range(10)]
+    pile_counts = list(map(int, input("Rows: ").split(" ")))
 
-    print("Winning: " + str(is_winning(pile_counts, root_state, solution)))
+    print("Winning: " + str(solve(pile_counts, root_state, solution)))
 
     # print_path(pile_counts, root_state)
 
