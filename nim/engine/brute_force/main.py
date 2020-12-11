@@ -1,6 +1,5 @@
 import sys
 
-from app import NimGameApp
 
 if __name__ == '__main__':
     piles = list(map(int, sys.argv[1:]))

@@ -20,11 +20,23 @@ function App() {
     number[]
   >([]);
 
+  const walk = (node: StateNode) => {
+    setTreeData({
+      ...treeData,
+      name: `${node.m.i},${node.m.n}`,
+      attributes: {
+        Winning: node.w ? "true" : "false",
+      },
+    });
+    node.c.forEach((child) => {
+      walk(child);
+    });
+  };
+
   React.useEffect(() => {
     solve(rows, (gameTree, solution) => {
-      setTreeData({
-        name: rows.toString(),
-      });
+      walk(gameTree);
+      console.log(solution);
     });
   }, [rows]);
 
