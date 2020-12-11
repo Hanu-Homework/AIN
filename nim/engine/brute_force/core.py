@@ -3,11 +3,6 @@ from typing import List, Tuple, Dict, Union
 class StateNode:
     """A class that contains the information of one position for the Nim game
 
-    If the class has public attributes, they may be documented here
-    in an ``Attributes`` section and follow the same formatting as a
-    function's ``Args`` section. Alternatively, attributes may be documented
-    inline with the attribute's declaration (see __init__ method below).
-
     Attributes:
         move (str): The move that has been made in the previous state.
         is_winning (:obj:`bool`, optional): Whether this position in winning or not.
@@ -34,10 +29,10 @@ class StateNode:
 
 def solve(
         piles: List[int],
-        current_state_node: StateNode,
+        current_state_node: StateNode,  # StateNode usage
         solution_dict: Dict[Tuple[int, ...], Tuple[int, int]],
         is_my_turn: bool=True,
-        visited_states=None
+        visited_states: Dict[Tuple[Tuple[int, ...], bool], bool]=None
 ) -> bool:
     """Solves the piles, creates a game tree and returns a dictionary containing the solution for each child state
 
@@ -65,24 +60,26 @@ def solve(
         visited_states = dict()
 
     # BASE CASE:
-    # Because the person who take the last stick will lose,
-    # the person who enter the state which has no sticks will win
+    # Because the person who take the last stick will win,
+    # the person who enter the state which has no sticks will lose
     # So, if there is nothing left
     if sum(piles) == 0:
         # Then if it is my turn,
         if is_my_turn:
-            # then I've won
-            return True
+            # then I've lost
+            return False
         # Otherwise,
         else:
-            # I've lost
-            return False
+            # I've won
+            return True
 
     # The tuple containing the representation for the current state
-    # Example value: ((1, 3, 5, 6), False) => The pile counts for the current position is 1, 3, 5, 6 and
+    # Example value: ((1, 3, 5, 6), False) => The pile counts for the
+    # current position is 1, 3, 5, 6 and it is the other turn
     state_notation = (tuple(sorted(piles)), is_my_turn)
 
-    # Check the current position whether it is calculated or not.
+    # Check the current position whether it is calculated or not:
+
     # If the current position was determined in the previous steps
     if state_notation in visited_states:
         # Return it immediately, no more calculations
@@ -106,22 +103,29 @@ def solve(
         # this will be changed to False (in the next step)
         result = True
 
+    is_result_determined = False
+
     # Brute forcing: Iterate through all possible next states from the current state
-    for i in range(len(piles)):
+    for pile_index in range(len(piles)):
+
+        if is_result_determined:
+            break
+
         # In each turn, one player can take a minimum of 1 and a maximum of that pile count
         # So, the looping range is [1, current pile count + 1)
-        for number_of_takes in range(1, piles[i] + 1):
-            # The representation for the current change
-            move = (i, number_of_takes)
+        for number_of_takes in range(1, piles[pile_index] + 1):
+
+            if is_result_determined:
+                break
 
             # Copy the current pile state to a new state array
             new_piles = piles.copy()
             # Remove from the current pile the current number of takes
-            new_piles[i] -= number_of_takes
+            new_piles[pile_index] -= number_of_takes
 
             # With the new information for the next state, forms a new state node
             new_state_node = StateNode()
-            new_state_node.move = move
+            new_state_node.move = (pile_index, number_of_takes)  # The move in order to reach this new state
 
             # Add this new state node as a child of the current state node
             current_state_node.children.append(new_state_node)
@@ -140,11 +144,16 @@ def solve(
                 # Then I will definitely take that path, don't care about other path
                 # So, the result for this state is winning for me, switch the result to True
                 result = True
+                is_result_determined = True
+
+                # The representation for the current change
+                pile_index_in_sorted_state = state_notation[0].index(piles[pile_index])
+                solution_move = (pile_index_in_sorted_state, number_of_takes)
 
                 # Save this to the solution dictionary
                 #   - Key: the state that I'm having
                 #   - Value: the tuple representing the move (row_index, number_of_takes)
-                solution_dict[state_notation[0]] = move
+                solution_dict[state_notation[0]] = solution_move
 
             # Else if it the other turn and ONE OR MORE paths are losing
             # (NOT ALL or the paths are winning for me)
@@ -153,6 +162,7 @@ def solve(
                 # as it is winning for them. So, the result for this state is losing for me,
                 # switch the result to False
                 result = False
+                is_result_determined = True
 
     # Save the result as a cache for future reuse (memoization)
     visited_states[state_notation] = result
@@ -181,23 +191,6 @@ def search_for_winning_move(
         state: List[int],
         solution_dict: Dict[Tuple[int, ...], Tuple[int, int]]
 ) -> Tuple[int, int]:
-    """Solves the piles, creates a game tree and returns a dictionary containing the solution for each child state
-
-    This is a brute force search algorithm applied with dynamic programming and memoization for the Nim game.
-
-    After running this algorithm, the following input parameters will be modified:
-        - current_state_node: this will contains the entire game tree, starting from the initial state as the root
-        - solution_dict: this will contains all the solutions for all positions in the form of:
-            key: state notation of the position, e.g: (1, 3, 5, 6): one stick in the first row, three sticks in the second...
-            value: winning move as a tuple of (row_index, number_of_takes), e.g: (0, 2): take from the first row (0) two sticks (2)
-
-    Args:
-        state: the given pile position to find the winning move
-        solution_dict (dict): the dictionary containing all current found solutions
-
-    Returns:
-        bool: True is the current state is winning, False otherwise
-    """
 
     state_notation = tuple(sorted(state))
 
@@ -258,6 +251,9 @@ class NimGameApp:
     def get_solution_as_json(self):
         return self.__solution_as_json()
 
+    def print_game_tree(self):
+        print_path(self.pile_counts, self.root_state)
+
     def play(self) -> None:
         if sum(self.pile_counts) == 0:
             print("You Won")
@@ -300,5 +296,7 @@ if __name__ == '__main__':
     pile_counts = list(map(int, input("Rows: ").split(" ")))
 
     nim_app = NimGameApp(piles=pile_counts)
+
+    nim_app.print_game_tree()
 
     nim_app.play()
